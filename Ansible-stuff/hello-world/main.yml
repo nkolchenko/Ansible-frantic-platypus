@@ -1,0 +1,12 @@
+---
+- hosts: localhost
+  gather_facts: false
+
+  tasks:
+    - name: Get the current date.
+      command: date                         # that's an Ansible module
+      register: current_date
+      changed_when: false
+    - name: Print the current date.
+      debug:                                # that's an Ansible module
+        msg: "{{ current_date.stdout }}"    # you can pass 'var' or 'msg'. Curly brackets for jinja templating
