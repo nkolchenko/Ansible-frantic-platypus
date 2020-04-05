@@ -1,0 +1,43 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    app: knp-hello-go-app
+  name: knp-hello-go-deploy
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: knp-hello-go-app
+  template:
+    metadata:
+      labels:
+        app: knp-hello-go-app
+    spec:
+      containers:
+      - image: nkolchenko/enea:server_go_latest
+        imagePullPolicy: IfNotPresent
+        name: hello-go-server
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: knp-hello-go-app
+  name: knp-hello-go-svc
+  namespace: default
+spec:
+  ports:
+  - nodePort: 32522     # for nodePort
+    port: 8182          # for LoadBalancer_IP:port 
+    protocol: TCP    
+    targetPort: 8180    # knp-hello-go-app listens on this port
+  selector:
+    app: knp-hello-go-app
+  sessionAffinity: None
+  type: LoadBalancer
+
