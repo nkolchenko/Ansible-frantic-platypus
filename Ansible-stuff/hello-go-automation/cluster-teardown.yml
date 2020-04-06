@@ -1,0 +1,31 @@
+---
+- hosts: localhost
+  gather_facts: false
+
+  vars:
+    ansible_python_interpreter: '{{ ansible_playbook_python }}'
+
+  pre_tasks:
+    - name: Check Minikube's status.
+      command: minikube status
+      register: minikube_status
+      changed_when: false
+      ignore_errors: true
+
+    - name: Output minikube_status.
+      debug:
+        msg: "{{ minikube_status.stdout }}'"
+
+  tasks:
+
+    - name: Stop minikube if running.
+      command: minikube stop
+      when: "'Running' in minikube_status.stdout"
+
+  post_tasks:
+    # TODO: check how to reuse tasks from the same playbook
+    - name: Check Minikube's status again.
+      command: minikube status
+      register: minikube_status
+      changed_when: false
+      ignore_errors: true
