@@ -1,0 +1,57 @@
+---
+# to check docker_image and docker_container modules
+# installed by pip install docker
+- hosts: localhost
+  gather_facts: false
+
+  vars:
+    ansible_python_interpreter: '{{ ansible_playbook_python }}'
+    image_name: hello-go
+    image_tag: latest
+
+
+
+  tasks:
+    - name: dckr
+      service:
+        name=docker
+        state=started
+
+    - name: Build the Hello Go image.
+      docker_image:
+        debug: yes
+        build:
+          path: ../../hello-go    # there is a Dockerfile there
+          pull: false
+        name: '{{ image_name }}'
+        tag: '{{ image_tag }}'
+        source: build
+
+    - name: Run the Hello Go image.
+      docker_container:
+        name: hello-go
+        image: '{{ image_name }}:{{ image_tag }}'
+        state: started
+        published_ports:
+          - 8180:8180
+
+    - name: Verify that hello Go is responding.
+      # if it doesn't respond, Ansible would report task as Failed and end playbook execution
+      # but your container will be up and running.  `docker ps`
+      uri:
+        url: http://localhost:8180/test
+        return_content: true
+      register: hello_go_response
+      failed_when: "'/test' not in hello_go_response.content"
+
+    - name: Print the response from Hello Go.
+      debug: var=hello_go_response
+
+    - name: Stop and remove the Hello Go container.
+      docker_container:
+        name: hello-go
+        state: absent
+
+
+
+
