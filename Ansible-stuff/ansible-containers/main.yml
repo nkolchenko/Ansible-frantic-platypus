@@ -9,10 +9,8 @@
     image_name: hello-go
     image_tag: latest
 
-
-
   tasks:
-    - name: dckr
+    - name: Ensure that the Docker daemon runs on Host
       service:
         name=docker
         state=started
@@ -52,6 +50,24 @@
         name: hello-go
         state: absent
 
+  post_tasks:
 
+    - name: Log into Docker Registry.
+      docker_login:
+        registry: '{{ registry_url }}'
+        username: '{{ registry_username }}'
+        password: '{{ registry_password }}'
+      when:
+        - registry_url is defined and registry_url != ''
+        - registry_username is defined and registry_username != ''
+        - registry_password is defined and registry_password != ''
+
+    - name: Push Hello Go image to Docker Registry
+      docker_image:
+        name: '{{ image_name }}'
+        tag: '{{ image_tag }}'
+        repository: 'localhost:5000/{{ image_name }}:{{ image_tag }}'
+        push: true
+        source: local
 
 
