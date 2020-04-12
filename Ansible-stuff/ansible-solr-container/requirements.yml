@@ -1,4 +1,5 @@
 ---
+# ansible-galaxy install -r requirements.yml
 roles:
   - name: geerlingguy.java
   - name: geerlingguy.solr
