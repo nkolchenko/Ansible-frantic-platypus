@@ -1,0 +1,41 @@
+---
+- hosts: localhost
+  gather_facts: false
+
+  vars:
+    ansible_python_interpreter: '{{ ansible_playbook_python }}'
+    jekyll_version: '3.8'
+    image_name: 'jekyll/jekyll'
+    my_image_tag: 'v3'
+
+  pre_tasks:
+    - name: Pull the Jekyll image.
+      docker_image:
+        name: '{{ image_name }}:{{ jekyll_version }}'
+        state: present
+        source: pull
+
+  tasks:
+    - name: Build my Jekyll image.
+      docker_image:
+        debug: yes
+        build:
+          path: .    # path to a directory containing the context and Dockerfile for building an image
+          pull: yes   # When building an image DON'T downloads any updates to the FROM image in Dockerfile.
+          rm: yes    # Remove intermediate containers after build.
+        name: '{{ image_name }}'
+        tag: '{{ my_image_tag }}'
+        source: build
+
+    - name: run my Jekyll container.
+      docker_container:
+        image: '{{ image_name }}:{{ my_image_tag }}'
+        name: jekyll
+        volumes:
+          - /home/kiwi/PycharmProjects/frantic-platypus/practice/jekyll/mysite:/srv/jekyll
+        state: started
+        command: jekyll serve --source /srv/jekyll
+        published_ports:
+          - 4000:4000
+
+# docker run --rm -p 4000:4000 --volume="$PWD/jekyll/mysite:/srv/jekyll" -it jekyll/jekyll:<tag> jekyll serve
