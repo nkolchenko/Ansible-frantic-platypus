@@ -36,12 +36,13 @@ def close_kiwi_db(connection):
     connection.close()
     print("close_kiwi_db:   connection CLOSED")
 
-def modify_data(username,birth_date_str):
+def modify_data(username,birth_date_str, connection):
     with connection.cursor() as cursor:
+        print("modify_data:   entered")
         # Write or update a single record
         sql = "INSERT INTO `user_data` (`username`, `birth_date_str`) VALUES (%s,%s) ON DUPLICATE KEY UPDATE birth_date_str=%s"
         cursor.execute(sql, (username, birth_date_str, birth_date_str))
-        print("modify_data:   "+str(sql, (username, birth_date_str, birth_date_str)))
+        print("modify_data:   "+str(sql))
     # connection is not autocommit by default. So you must commit to save your changes.
     connection.commit()
 
@@ -154,13 +155,37 @@ class SputHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         print("Headers: ")
         print(self.headers)
         print("Path: "+str(self.path))
+
+        path_split = self.path.split("/", 2)
+        username = path_split[-1]
+        print("do_PUT:   username: " + str(path_split[-1]))  # nikolay/uuuuer
+
         length = int(self.headers["Content-Length"])
 #        path = self.translate_path(self.path)
 #        with open(path, "wb") as dst:
 #            dst.write(self.rfile.read(length))
-        bytes = self.rfile.read(length)
-        string = bytes.decode("utf-8")
-        print(string)
+
+        ''' 
+        I assume that the following structure is sent as a payload: {"dateOfBirth": "1999-03-03"} 
+        That's not a JSON and I won't be bothering converting it to Dictionary
+        '''
+        bytes_payload = self.rfile.read(length)
+        payload_str = bytes_payload.decode("utf-8")  # that's a string: {"dateOfBirth": "1999-03-03"}
+        payload_list = payload_str.split("\"")        # that's a list: ['{', 'dateOfBirth', ': ', '1999-03-03', '}']
+        birth_date_str = payload_list[3]                     # that's a 1999-03-03
+
+        print("do_PUT:   birth_date_str: "+str(birth_date_str))
+
+        print("do_PUT:   Let's open db_conn")
+        connection = open_kiwi_db()
+        print("do_PUT:   opened!")
+        modify_data(username, birth_date_str, connection)
+        print("do_PUT:   new data is sent to db!")
+        close_kiwi_db(connection)
+
+
+
+
 
     def do_GET(self):
         """
