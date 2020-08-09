@@ -18,9 +18,6 @@ import pymysql
 import pymysql.cursors
 import json
 
-
-birth_date_str = '1984-08-10'
-
 def open_kiwi_db():
     # Connect to the database
     connection = pymysql.connect(host='localhost',
@@ -31,23 +28,23 @@ def open_kiwi_db():
                                  cursorclass=pymysql.cursors.DictCursor)
     return connection
 
+
 def close_kiwi_db(connection):
     print("close_kiwi_db:   closing connection")
     connection.close()
     print("close_kiwi_db:   connection CLOSED")
 
+
 def modify_data(username,birth_date_str, connection):
     with connection.cursor() as cursor:
         print("modify_data:   entered")
-        # Write or update a single record
         sql = "INSERT INTO `user_data` (`username`, `birth_date_str`) VALUES (%s,%s) ON DUPLICATE KEY UPDATE birth_date_str=%s"
         cursor.execute(sql, (username, birth_date_str, birth_date_str))
-        print("modify_data:   "+str(sql))
-    # connection is not autocommit by default. So you must commit to save your changes.
+        print("modify_data:   "+str((sql, (username, birth_date_str, birth_date_str))))
     connection.commit()
 
+
 def select_data(username, connection):
-    #connection = open_kiwi_db()
     with connection.cursor() as cursor:
         # Read a single record
         sql = "SELECT `birth_date_str` FROM `user_data` WHERE `username` =%s"
@@ -62,18 +59,31 @@ def select_data(username, connection):
 
 
 def srv_run():
-    PORT = 8889
-    handler = SputHTTPRequestHandler
-    httpd = socketserver.TCPServer(("", PORT), handler)
-    print("serving at port", PORT)
+    port = 8888
+
+
+    handler = ExtendedHTTPRequestHandler
+    httpd = socketserver.TCPServer(("", port), handler)
+    print("serving at port", port)
     httpd.serve_forever()
 
 
 def calculate_dates(birth_date, curr_date):
+
+    # Feb29th workaround. We can't let anyone to be upset with the fact that he/she shall wait for more than 365days
+    # for the next Birthday! :-D  Replace Feb 29th with Mar 1st for days_untill_bday calculation.
+
+    if birth_date.month == 2 and birth_date.day == 29:
+        birth_date_adjusted = birth_date.replace(month=0o3, day=0o1)
+
+        print("calculate_dates:   leap year conversion " + str(birth_date_adjusted))
+        birth_date = birth_date_adjusted
+
     this_year_bdate = datetime(curr_date.year, birth_date.month, birth_date.day)
     print("calculate_dates:   this year b-day: "+ str(this_year_bdate))
     next_year_bdate = datetime(curr_date.year+1, birth_date.month, birth_date.day)
     print("calculate_dates:   next year b-day: "+ str(next_year_bdate ))
+
     if curr_date > this_year_bdate:
         days_untill_bday = (next_year_bdate - curr_date).days
     else:
@@ -81,9 +91,8 @@ def calculate_dates(birth_date, curr_date):
     print("calculate_dates:   days_untill_bday: " + str(days_untill_bday))
     return days_untill_bday
 
+
 def get_days(birth_date_str):
-    #birth_date_str = '1984-08-10'
-    #curr_date = date.today()
     curr_date_str = datetime.strftime(date.today(), '%Y-%m-%d')
     curr_date = datetime.strptime(curr_date_str, '%Y-%m-%d')
     print("get_days:   curr_date: " + str(curr_date))
@@ -113,10 +122,7 @@ def construct_body(username, days_untill_bday):
     return message
 
 
-#Handler = http.server.SimpleHTTPRequestHandler
-#Handler = http.server.BaseHTTPRequestHandler
-
-class SputHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
+class ExtendedHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
     from urllib.parse import urlparse
     def send_reply(self, message):
         #message = name
@@ -144,6 +150,8 @@ class SputHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         """
         Saves/updates given user's name and birthdate to database:
         Request: PUT /hello/<username> {"dateOfBirth": "YYYY-MM-DD"}
+        curl -v -X PUT -H "Content-Type: application/json" -d '{"dateOfBirth": "1999-03-03"}' localhost:8889/hello/sman
+
         Response: 204 No Content
         Rules:
             - username must contain only letters;
@@ -166,13 +174,13 @@ class SputHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
 #            dst.write(self.rfile.read(length))
 
         ''' 
-        I assume that the following structure is sent as a payload: {"dateOfBirth": "1999-03-03"} 
-        That's not a JSON and I won't be bothering converting it to Dictionary
+        I assume that the following structure is sent as a payload: {"dateOfBirth": "1999-03-03"} (JSON, double quotes)
         '''
         bytes_payload = self.rfile.read(length)
         payload_str = bytes_payload.decode("utf-8")  # that's a string: {"dateOfBirth": "1999-03-03"}
         payload_list = payload_str.split("\"")        # that's a list: ['{', 'dateOfBirth', ': ', '1999-03-03', '}']
         birth_date_str = payload_list[3]                     # that's a 1999-03-03
+
 
         print("do_PUT:   birth_date_str: "+str(birth_date_str))
 
@@ -182,9 +190,7 @@ class SputHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         modify_data(username, birth_date_str, connection)
         print("do_PUT:   new data is sent to db!")
         close_kiwi_db(connection)
-
-
-
+        print("do_PUT:   DONE! \n")
 
 
     def do_GET(self):
@@ -193,8 +199,8 @@ class SputHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             Request: GET /hello/<username>
             Response: 200 OK
         """
+        print("do_GET:   got: " + str(self.path))
 
-        #print(self.path)        # /hello/nikolay/uuuuer
         path_split = self.path.split("/", 2)
         print("do_GET:   path_split: "+str(path_split))              #  ['', 'hello', 'nikolay/uuuuer']
         username = path_split[-1]
@@ -220,8 +226,10 @@ class SputHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         #self.send_response(HTTPStatus.OK)
         self.send_reply(message)
 #        self.send_header("Content-type", ctype)
+        print("do_GET:   DONE! \n")
+
 
 if __name__ == '__main__':
 
-    print("Let's start web-server")
+    print("Let's start web-server\n")
     srv_run()
