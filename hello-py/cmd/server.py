@@ -12,7 +12,7 @@ import pymysql.cursors
 import json
 
 
-def db_open_kiwi():
+def db_open():
     # Connect to the database
     connection = pymysql.connect(host='localhost',
                                  user='kiwi_user',
@@ -20,36 +20,36 @@ def db_open_kiwi():
                                  db='kiwi_task',
                                  charset='utf8',
                                  cursorclass=pymysql.cursors.DictCursor)
-    print("db_open_kiwi:   connection OPENED")
+    print("db_open:   connection OPENED")
     return connection
 
 
-def db_close_kiwi(connection):
+def db_close(connection):
     connection.close()
-    print("db_close_kiwi:   connection CLOSED")
+    print("db_close:   connection CLOSED")
 
 
-def db_modify_data(username, birth_date_str, connection):
+def db_update(username, birth_date, connection):
     with connection.cursor() as cursor:
-        print("db_modify_data:   entered")
-        sql = "INSERT INTO `user_data` (`username`, `birth_date_str`) VALUES (%s,%s) ON DUPLICATE KEY UPDATE birth_date_str=%s"
-        cursor.execute(sql, (username, birth_date_str, birth_date_str))
-        print("db_modify_data:   " + str((sql, (username, birth_date_str, birth_date_str))))
+        print("db_update:   entered")
+        sql = "INSERT INTO `user_data_date` (`username`, `birth_date`) VALUES (%s,%s) ON DUPLICATE KEY UPDATE birth_date=%s"
+        cursor.execute(sql, (username, birth_date, birth_date))
+        print("db_update:   " + str((sql, (username, birth_date, birth_date))))
     connection.commit()
 
 
-def db_select_birth_date(username, connection):
+def db_select(username, connection):
     with connection.cursor() as cursor:
         # Read a single record
-        sql = "SELECT `birth_date_str` FROM `user_data` WHERE `username` =%s"
+        sql = "SELECT `birth_date` FROM `user_data_date` WHERE `username` =%s"
         cursor.execute(sql, username)
         birth_date_dict = cursor.fetchone()
-        # Example: birth_date_dict= {'birth_date_str': '1984-03-17'}   it's a dictionary
-        birth_date_str = birth_date_dict['birth_date_str']
+        # Example: birth_date = {'birth_date': '1984-03-17'}   it's a dictionary
+        birth_date = birth_date_dict['birth_date']
 
-        print("db_select_birth_date:   birth_date_str= " + str(birth_date_str))
+        print("db_select:   birth_date = " + str(birth_date))
 
-    return birth_date_str
+    return birth_date
 
 
 def srv_run():
@@ -60,16 +60,14 @@ def srv_run():
     httpd.serve_forever()
 
 
-def get_days_to_bday(birth_date_str):
-    # TODO: dates validation.
-    # TODO: Feb29th workaround.
-    curr_date_str = datetime.strftime(date.today(), '%Y-%m-%d')
-    curr_date = datetime.strptime(curr_date_str, '%Y-%m-%d')
+def get_days_to_bday(birth_date):
+    # TODO: Add date validation to prevent usage of non-existing dates (Ex. Mar-136th).
+    # TODO: Add logic to calculate days_to_bday if birthday is on Feb 29th.
 
-    birth_date = datetime.strptime(birth_date_str, '%Y-%m-%d')
+    curr_date = date.today()
 
-    this_year_bdate = datetime(curr_date.year, birth_date.month, birth_date.day)
-    next_year_bdate = datetime(curr_date.year + 1, birth_date.month, birth_date.day)
+    this_year_bdate = date(curr_date.year, birth_date.month, birth_date.day)
+    next_year_bdate = date(curr_date.year + 1, birth_date.month, birth_date.day)
 
     if curr_date > this_year_bdate:
         days_to_bday = (next_year_bdate - curr_date).days
@@ -123,23 +121,24 @@ class ExtendedHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         path_split = self.path.split("/", 2)
         username = path_split[-1]
         length = int(self.headers["Content-Length"])
-
         bytes_payload = self.rfile.read(length)
-        payload_str = bytes_payload.decode("utf-8")  # that's a string: {"dateOfBirth": "1999-03-03"}
-        payload_list = payload_str.split("\"")  # that's a list: ['{', 'dateOfBirth', ': ', '1999-03-03', '}']
-        birth_date_str = payload_list[3]  # that's a 1999-03-03
-        print("do_PUT:   birth_date_str: " + str(birth_date_str))
 
-        # TODO: date validation.
-        curr_date_str = datetime.strftime(date.today(), '%Y-%m-%d')
-        curr_date = datetime.strptime(curr_date_str, '%Y-%m-%d')
+        # TODO: validate if we've got a valid JSON from client.
+        json_obj = json.loads(bytes_payload)
+        # TODO: check if there is a 'dateOfBirth' field in that JSON.
+        birth_date_str = json_obj['dateOfBirth']  # that's a 1999-03-03
+        # TODO: check if the value for 'dateOfBirth' is a string.
         birth_date = datetime.strptime(birth_date_str, '%Y-%m-%d')
+        birth_date = birth_date.date()
+        print("do_PUT:   birth_date: " + str(birth_date))
+
+        curr_date = date.today()
 
         if curr_date >= birth_date:
-            connection = db_open_kiwi()
-            db_modify_data(username, birth_date_str, connection)
+            connection = db_open()
+            db_update(username, birth_date, connection)
             print("do_PUT:   new data is sent to db!")
-            db_close_kiwi(connection)
+            db_close(connection)
             print("do_PUT:   DONE! \n")
         else:
             print("do_PUT:   The birth_date is in the future. Not saving to DB.\n")
@@ -154,11 +153,11 @@ class ExtendedHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         path_split = self.path.split("/", 2)  # ['', 'hello', 'nikolay/uuuuer']
         username = path_split[-1]  # nikolay/uuuuer
         print("do_GET:   Let's open db_conn")
-        connection = db_open_kiwi()
-        birth_date_str = db_select_birth_date(username, connection)
-        db_close_kiwi(connection)
+        connection = db_open()
+        birth_date = db_select(username, connection)
+        db_close(connection)
 
-        days_until_bday = get_days_to_bday(birth_date_str)
+        days_until_bday = get_days_to_bday(birth_date)
         json_obj = http_construct_json(username, days_until_bday)
 
         self.http_send_reply(json_obj)
