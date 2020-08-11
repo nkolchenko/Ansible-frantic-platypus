@@ -79,9 +79,9 @@ def get_days_to_bday(birth_date_str):
     return days_to_bday
 
 
-def http_construct_json(username, days_untill_bday):
-    if days_untill_bday > 0:
-        message = "Hello, " + str(username) + "! Your birthday is in " + str(days_untill_bday) + " day(s)"
+def http_construct_json(username, days_to_bday):
+    if days_to_bday > 0:
+        message = "Hello, " + str(username) + "! Your birthday is in " + str(days_to_bday) + " day(s)"
     else:
         message = "Hello, " + str(username) + "! Happy birthday!"
     message_dict = {"message": message}
