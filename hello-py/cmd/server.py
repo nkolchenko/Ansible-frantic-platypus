@@ -38,7 +38,7 @@ def db_modify_data(username, birth_date_str, connection):
     connection.commit()
 
 
-def db_select_data(username, connection):
+def db_select_birth_date(username, connection):
     with connection.cursor() as cursor:
         # Read a single record
         sql = "SELECT `birth_date_str` FROM `user_data` WHERE `username` =%s"
@@ -47,7 +47,7 @@ def db_select_data(username, connection):
         # Example: birth_date_dict= {'birth_date_str': '1984-03-17'}   it's a dictionary
         birth_date_str = birth_date_dict['birth_date_str']
 
-        print("db_select_data:   birth_date_str= " + str(birth_date_str))
+        print("db_select_birth_date:   birth_date_str= " + str(birth_date_str))
 
     return birth_date_str
 
@@ -155,7 +155,7 @@ class ExtendedHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         username = path_split[-1]  # nikolay/uuuuer
         print("do_GET:   Let's open db_conn")
         connection = db_open_kiwi()
-        birth_date_str = db_select_data(username, connection)
+        birth_date_str = db_select_birth_date(username, connection)
         db_close_kiwi(connection)
 
         days_until_bday = get_days_to_bday(birth_date_str)
