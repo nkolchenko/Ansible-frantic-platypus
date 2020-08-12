@@ -4,22 +4,24 @@
 
 import http.server
 import socketserver
-from urllib.parse import urlparse
 from http import HTTPStatus
 from datetime import date, datetime
 import pymysql
 import pymysql.cursors
 import json
+import os
 
 
 def db_open():
-    # Connect to the database
-    connection = pymysql.connect(host='localhost',
-                                 user='kiwi_user',
-                                 password='pss73549189w',
-                                 db='kiwi_task',
-                                 charset='utf8',
-                                 cursorclass=pymysql.cursors.DictCursor)
+    # user/password are assigned via ENV_VARS through K8s secret.
+    # host/db assigned via K8s ConfigMap.
+    connection = pymysql.connect(
+        host=os.environ['DB_HOST'],
+        user=os.environ['DB_USER'],
+        password=os.environ['DB_PASSWORD'],
+        db=os.environ['DB'],
+        charset='utf8',
+        cursorclass=pymysql.cursors.DictCursor)
     print("db_open:   connection OPENED")
     return connection
 
@@ -53,7 +55,9 @@ def db_select(username, connection):
 
 
 def srv_run():
-    port = 8180
+    # port = 8181
+    # port value provided via k8s ConfigMap
+    port = os.environ['LISTEN_PORT']
     handler = ExtendedHTTPRequestHandler
     httpd = socketserver.TCPServer(("", port), handler)
     print("serving at port", port)
