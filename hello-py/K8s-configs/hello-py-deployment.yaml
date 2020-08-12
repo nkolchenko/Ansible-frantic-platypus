@@ -1,0 +1,56 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  annotations:
+  labels:
+    app: hello-py
+  name: hello-py
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hello-py
+  template:
+    metadata:
+      labels:
+        app: hello-py
+    spec:
+      containers:
+      - image: nkolchenko/enea:hello-py
+        imagePullPolicy: IfNotPresent
+        name: hello-py
+        env:
+          - name: DB_USER
+            valueFrom:
+              secretKeyRef:
+                name: kiwi-db-secret
+                key: user
+          - name: DB_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: kiwi-db-secret
+                key: password
+          - name: HOST
+            valueFrom:
+              configMapKeyRef:
+                name: kiwi-config-map
+                key: host
+          - name: DB
+            valueFrom:
+              configMapKeyRef:
+                name: kiwi-config-map
+                key: db
+          - name: LISTEN_PORT
+            valueFrom:
+              configMapKeyRef:
+                name: kiwi-config-map
+                key: listen_port
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
