@@ -17,8 +17,8 @@ spec:
         app: hello-py
     spec:
       containers:
-      - image: nkolchenko/enea:hello-py
-        imagePullPolicy: IfNotPresent
+      - image: nkolchenko/enea:hello-py-v1.0
+        imagePullPolicy: Always
         name: hello-py
         env:
           - name: DB_USER
@@ -31,7 +31,7 @@ spec:
               secretKeyRef:
                 name: kiwi-db-secret
                 key: password
-          - name: HOST
+          - name: DB_HOST
             valueFrom:
               configMapKeyRef:
                 name: kiwi-config-map
@@ -54,3 +54,20 @@ spec:
       schedulerName: default-scheduler
       securityContext: {}
       terminationGracePeriodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hello-py-service
+spec:
+  ports:
+  - name: hello-py
+    nodePort: 30010
+    port: 8180
+    protocol: TCP
+    targetPort: 8180
+  selector:
+    app: hello-py
+  type: NodePort
+
+

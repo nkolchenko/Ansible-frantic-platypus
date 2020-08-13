@@ -1,7 +1,17 @@
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
-  name: kiwi-storage-class
+  name: mysql-db-storageclass
+parameters:
+  type: pd-ssd
+provisioner: kubernetes.io/gce-pd
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: mysql-files-storageclass
 parameters:
   type: pd-ssd
 provisioner: kubernetes.io/gce-pd
@@ -13,17 +23,35 @@ kind: PersistentVolume
 metadata:
   finalizers:
   - kubernetes.io/pv-protection
-  name: kiwi-mysql-pv
+  name: mysql-db-pv
 spec:
   accessModes:
   - ReadWriteOnce
   capacity:
-    storage: 1Gi
+    storage: 2Gi
   hostPath:
-    path: /kiwi-mysql-data
+    path: /kiwi-mysql/db
     type: ""
   persistentVolumeReclaimPolicy: Retain
-  storageClassName: kiwi-storage-class
+  storageClassName: mysql-db-storageclass
+  volumeMode: Filesystem
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  finalizers:
+  - kubernetes.io/pv-protection
+  name: mysql-files-pv
+spec:
+  accessModes:
+  - ReadWriteOnce
+  capacity:
+    storage: 2Gi
+  hostPath:
+    path: /kiwi-mysql/files
+    type: ""
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: mysql-files-storageclass
   volumeMode: Filesystem
 ---
 apiVersion: v1
@@ -31,7 +59,7 @@ kind: PersistentVolumeClaim
 metadata:
   finalizers:
   - kubernetes.io/pvc-protection
-  name: kiwi-mysql-pvc
+  name: mysql-db-pvc
   namespace: default
 spec:
   accessModes:
@@ -39,4 +67,19 @@ spec:
   resources:
     requests:
       storage: 1Gi
-  storageClassName: kiwi-storage-class
+  storageClassName: mysql-db-storageclass
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  finalizers:
+  - kubernetes.io/pvc-protection
+  name: mysql-files-pvc
+  namespace: default
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: mysql-files-storageclass
