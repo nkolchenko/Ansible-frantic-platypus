@@ -34,7 +34,7 @@ def db_close(connection):
 def db_update(username, birth_date, connection):
     with connection.cursor() as cursor:
         print("db_update:   entered")
-        sql = "INSERT INTO `user_data_date` (`username`, `birth_date`) VALUES (%s,%s) ON DUPLICATE KEY UPDATE birth_date=%s"
+        sql = "INSERT INTO `user_birthday` (`username`, `birth_date`) VALUES (%s,%s) ON DUPLICATE KEY UPDATE birth_date=%s"
         cursor.execute(sql, (username, birth_date, birth_date))
         print("db_update:   " + str((sql, (username, birth_date, birth_date))))
     connection.commit()
@@ -43,7 +43,7 @@ def db_update(username, birth_date, connection):
 def db_select(username, connection):
     with connection.cursor() as cursor:
         # Read a single record
-        sql = "SELECT `birth_date` FROM `user_data_date` WHERE `username` =%s"
+        sql = "SELECT `birth_date` FROM `user_birthday` WHERE `username` =%s"
         cursor.execute(sql, username)
         birth_date_dict = cursor.fetchone()
         # Example: birth_date = {'birth_date': '1984-03-17'}   it's a dictionary
@@ -55,9 +55,11 @@ def db_select(username, connection):
 
 
 def srv_run():
-    # port = 8181
+    #port = 8180
     # port value provided via k8s ConfigMap
     port = os.environ['LISTEN_PORT']
+    port = int(port)
+    print(type(port))
     handler = ExtendedHTTPRequestHandler
     httpd = socketserver.TCPServer(("", port), handler)
     print("serving at port", port)
