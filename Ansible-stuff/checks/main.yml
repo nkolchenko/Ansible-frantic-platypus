@@ -1,0 +1,52 @@
+- hosts: localhost
+  gather_facts: false
+  ignore_errors: true
+
+  vars:
+    ansible_python_interpreter: '{{ ansible_playbook_python }}'
+    f_path: /home/kiwi/testfile_dup
+
+  tasks:
+    - name: Check if file {{f_path}} exists
+      stat:
+        path: "{{ f_path }}"
+      register: f_result
+
+#    - name: RESULT
+#      debug:
+#        msg: "{{f_result}}"
+
+    - name: Confirm {{f_path}} absence
+      debug:
+        msg: "Can't find {{ f_path }}"
+      when: not f_result.stat.exists
+
+    - name: Confirm {{f_path}} presence
+      debug:
+        msg: "Successfully found {{ f_path }}"
+      when: f_result.stat.exists
+
+    - name: Count duplicates in the file {{f_path}}
+      shell: awk -F"," '{print $1" "$2}' {{f_path}} | uniq -D | wc -l
+      register: duplicates_num
+      changed_when: false
+      when: f_result.stat.exists
+
+    - name: Print the duplicates_num.
+      debug:
+        msg: "Found {{ duplicates_num.stdout }} duplicates"
+      when: f_result.stat.exists and duplicates_num is succeeded and duplicates_num.stdout | int > 0
+
+    - name: Print the excuse.
+      debug:
+        msg: "duplicates_num calculation was SKIPPED or Zero"
+      when: duplicates_num is skipped or duplicates_num.stdout | int == 0
+
+
+
+
+
+
+
+
+
