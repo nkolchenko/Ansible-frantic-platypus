@@ -1,0 +1,151 @@
+# I have local MariaDB
+
+
+
+
+Furthermore, it will execute files with extensions .sh, .sql and .sql.gz that are found in /docker-entrypoint-initdb.d.
+Files will be executed in alphabetical order. You can easily populate your mysql services by mounting a SQL dump into that directory
+
+
+
+
+
+
+
+
+# MariaDB [(none)]> CREATE DATABASE `kiwi_task` DEFAULT CHARACTER SET utf8 ;
+# MariaDB [mysql]> create user `kiwi_user`@`localhost` IDENTIFIED BY 'pss73549189w';
+# MariaDB [mysql]> GRANT ALL PRIVILEGES ON kiwi_task.* TO 'kiwi_user'@'localhost' IDENTIFIED BY 'pss73549189w';
+# MariaDB [mysql]> flush privileges;
+# MariaDB [mysql]> CREATE TABLE `user_data` (username char(30), birth_date_str char(10), birth_date_datetime TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP);
+# MariaDB [mysql]> insert into user_data_date values ('nikolay','1984-03-17');
+CREATE TABLE `user_birthday` (   `username` char(30) NOT NULL,   `birth_date` date NOT NULL ,   PRIMARY KEY (`username`) ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+
+INSERT INTO user_birthday (username,birth_date_str) VALUES ('ololo','2020-08-15') ON DUPLICATE KEY UPDATE birth_date_str='2020-01-01';
+
+# https://remy.supertext.ch/2010/11/mysqlupdate-and-insert-if-not-exists/
+
+INSERT INTO users (username, email) VALUES (‘Jo’, ‘jo@email.com’)
+ON DUPLICATE KEY UPDATE email = ‘jo@email.com’
+
+
+#Unfortunately, this the ‘ON DUPLICATE KEY’ statement only works on PRIMARY KEY and UNIQUE columns.
+
+
+INSERT INTO wp_postmeta (post_id, meta_key) SELECT ?id, ‘page_title’  FROM DUAL WHERE NOT EXISTS (SELECT meta_id FROM wp_postmeta WHERE post_id = ?id AND meta_key = ‘page_title’);
+UPDATE wp_postmeta SET meta_value = ?page_title WHERE post_id = ?id AND meta_key = ‘page_title’;
+
+
+https://github.com/docker-library/python.git
+
+docker login docker.io
+docker tag hello-py:latest nkolchenko/enea:hello-py
+docker push nkolchenko/enea:hello-py
+
+# docker pull nkolchenko/enea:hello-py
+kubectl create deployment python --image=nkolchenko/enea:hello-py
+kubectl create deployment mysql --image=mysql
+kubectl create secret generic kiwi-db-secret --from-literal=user='kiwi_user' --from-literal=password='pss73549189w'
+15:15:20 kiwi@suse-laptop:~/$ kubectl describe secrets/kiwi-db-secret
+
+
+# vim kiwi_configmap.py
+
+cat kiwi_configmap.py
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kiwi-task
+data:
+  listen_port: "8888"
+  host: "mysql_service"
+  db: "kiwi_task"
+
+
+
+ cat kiwi-storageclass.yaml
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: kiwi-storage-class
+parameters:
+  type: pd-ssd
+provisioner: kubernetes.io/gce-pd
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
+
+
+cat kiwi-mysql-pv.yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  finalizers:
+  - kubernetes.io/pv-protection
+  name: kiwi-mysql-pv
+spec:
+  accessModes:
+  - ReadWriteOnce
+  capacity:
+    storage: 1Gi
+  hostPath:
+    path: /kiwi-mysql-data
+    type: ""
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: kiwi-storage-class
+  volumeMode: Filesystem
+
+kiwi-mysql-pvc.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  finalizers:
+  - kubernetes.io/pvc-protection
+  name: kiwi-mysql-pvc
+  namespace: default
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: kiwi-storage-class
+
+
+
+#TODO: kubectl create secret generic kiwi-db-secret --from-literal=user='kiwi_user' --from-literal=password='pss73549189w' --from-literal=MYSQL_ROOT_PASSWORD='password'
+
+
+
+
+----------------------
+
+
+
+Task 1. Design and code simple "Hello world" application that exposes the following HTTP-based APIs:
+
+> https://github.com/nkolchenko/frantic-platypus/tree/master/hello-py
+
+Task 2. Produce a system diagram of your solution deployed to either AWS or GCP (it's not required to support both cloud platforms).
+
+Please find it attached.
+I have no tool to create presentations/graphic on my PC, however, I think that the attachment explains my setup quite good
+
+Task 3. Write configuration scripts for building and no downtime production deployment of this application, keeping in mind aspects that and SRE would have consider.
+
+> https://github.com/nkolchenko/frantic-platypus/blob/master/hello-py/Dockerfile
+> https://github.com/nkolchenko/frantic-platypus/tree/master/hello-py/K8s-configs
+
+I have deployed my setup on k8s on my private GKE cluster it works. The only pecularity is that `mysql-files-pvc` should already contaqin an sql dump.
+Alternatively, it is possible to:
+1) kubectl exec -it <mysql_pod> -- bash
+2) mysql -uroot -p kiwi_task   # root's password is "password"
+3) CREATE TABLE `user_birthday` ( `username` char(30) NOT NULL, `birth_date` date NOT NULL , PRIMARY KEY (`username`) ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+Normally, such stuff is done by `initContainer`, however, for me it  was faster to put the dump on my PV.
+
+If I have more time I'd add:
+  1) on K8s side: Ingress+SSL , Mysql Operator
+  2) server.py:    More user input validation, Proper handling of cases when birth date is Feb-29th.
+
+

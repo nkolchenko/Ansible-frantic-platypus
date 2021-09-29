@@ -1,0 +1,107 @@
+# YAML.
+# No Tabs, only double spaces for Indentation.
+# Every item in a YAML document is a member of at least one dictionary.
+# The key is always a string. The value is a scalar so that it can be any datatype.
+
+foo: bar
+pleh: help
+
+# Numeric
+num_1: 12345     # Decimal
+num_2: 0x12d4    # Hexadecimal   num_2 : 4820
+num_3: 023332    # Octal         num_3 : 9946
+
+# YAML supports both fixed and exponential floating point numbers.
+
+float_1: 1230.15       # float_1 : 1230.15
+float_2: 12.3015e+05   # float_2 : 1230150.0
+
+# Nulls
+null_foo: ~      # null_foo : None
+null_bar: null   # null_bar : None
+
+# Booleans
+bool_1: True     # bool_1 : True
+bool_2: False    # bool_2 : False
+bool_3: On       # bool_3 : True
+bool_4: Off      # bool_4 : False
+
+# Strings
+str_1: "this is not a normal string\n"   #  \n processed
+str_2: this is not a normal string\n     #  this is not a normal string\n
+str_3: 'this is not a normal string\n'   #  this is not a normal string\n
+
+# Arrays ( key: [value, value, ...] )
+arr_1: [ 1, 2 ]
+arr_2: [ "one", "two" ]
+arr_3:
+  - 1
+  - 2
+arr_4:
+  - "one"
+  - "two"
+
+# Dictionaries ( key: {key:value, key:value, ...} )
+dict_1:
+  foo: bar
+  bar: foo
+# dict_1 : {'foo': 'bar', 'bar': 'foo'}
+
+# Array of dicts
+arr_dict_1:
+  - foo: bar
+  - bar: foo
+    ololo: lolo
+# arr_dict_1 : [{'foo': 'bar'}, {'bar': 'foo', 'ololo': 'lolo'}]
+
+arr_dict_2:
+  - things:
+      thing1: huey
+      things2: dewey
+      thing3: louie
+  - other things:
+      key: value
+# arr_dict_2 : [{'things': {'thing1': 'huey', 'things2': 'dewey', 'thing3': 'louie'}}, {'other things': {'key': 'value'}}]
+
+emloyees:
+    - id: 213
+      name: franc
+      others:
+            - {  department: sales, did: 1 }
+            - { salary: 5000}
+            - { address: USA, pincode: 97845 }
+# emloyees : [{'id': 213, 'name': 'franc', 'others': [{'department': 'sales', 'did': 1}, {'salary': 5000}, {'address': 'USA', 'pincode': 97845}]}]
+
+one:
+  - id: 1
+    name: franc
+  - id: 11
+    name: Tom
+# one : [{'id': 1, 'name': 'franc'}, {'id': 11, 'name': 'Tom'}]
+
+mysqldatabase:
+  hostname: localhost
+  port: 3012
+  username: root
+  password: root
+
+string: |+           # chomps. '+' lists all the empty lines
+  some lines 
+  are the lines.
+
+
+
+string2: |-          # chomps. '-' suppresses all the empty lines
+  some lines 
+  are the lines.
+
+
+
+##!/usr/bin/python3
+#import yaml
+#if __name__ == '__main__':
+#    stream = open("yaml_cheat_sheet.yaml", 'r')
+#    dictionary = yaml.load(stream)
+#    for key, value in dictionary.items():
+#       print(key + " : " + str(value))
+
